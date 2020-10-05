@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>TogglJIRA</title>
+    <link rel="stylesheet" href="index.css">
+
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Serverless web application example">
+    <meta name="author" content="">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://js.arcgis.com/4.3/esri/css/main.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+
+    <!-- 
+      <script type="text/javascript" src="./contents/jquery/jquery-3.5.1.min.js"></script>
+    -->
+    <script type="text/javascript" src="jquery/jquery-3.5.1.min.js" onload="window.$ = window.jQuery = module.exports;" ></script>
+    <script type="text/javascript" src="moment.min.js"></script>
+
+  </head>
+
+  <body>
+    <div class="panel-body">    
+      <section class="form-wrap">
+        <h1>Your Config</h1>
+        <form id="getTogglData">
+            <div id="userTogglConfig" class="panel-body">    
+                <div>JIRA Regex: <input type="text" id="jiraRegex" placeholder="jiraRegex" pattern=".*" required></div>
+                <div>JIRA URL: <input type="text" id="jiraUrl" placeholder="jiraUrl" pattern=".*" required></div>
+                <div>JIRA UserName: <input type="text" id="jiraUsername" placeholder="jiraUsername" pattern=".*" required></div>
+                <div>JIRA Password: <input type="password" id="jiraPassword" placeholder="" pattern=".*" required></div>
+                <div>Toggl Workspace ID: <input type="text" id="togglWorkspaceID" placeholder="togglWorkspaceID" pattern=".*" required></div>
+                <div>Toggle API Key: <input type="password" id="togglAPIKey" placeholder="togglAPIKey" pattern=".*" required></div>
+                <div style="display: none;">Toggl Tag ID: <input type="text" id="togglTagID" placeholder="togglTagID" pattern=".*" required></div>
+                <div>Entries Since: <input type="text" id="dateSince" placeholder="2020-10-01" pattern=".*"></div>
+                <div>Toggl Page: <input type="text" id="togglPage" placeholder="1" pattern=".*" required></div>
+            </div>
+            <input type="submit" value="Get Toggl Data">
+        </form>
+        <form id="saveit">
+          <input type="submit" value="Save Config">
+        </form>
+        <form id="fLoadConfig">
+          <input type="submit" value="Load Config">
+        </form>
+      </section>
+    </div>
+
+    <div class="panel-body">    
+      <section class="form-wrap">
+          <h1>Select Time Entries to Post to JIRA</h1>
+          <form id="saveTogglData">
+              <div id="userTogglData" class="panel-body">    
+              </div>
+              <input type="submit" value="Save">
+          </form>
+      </section>
+    </div>
+
+    <script>
+      const electron = require('electron');
+      const ipcRenderer = electron.ipcRenderer;
+      //let $ = require('jquery');
+      uPath = '';
+      cFile = ''
+
+      ipcRenderer.on('uPath', (event, data) => {
+        uPath = data;
+        cFile = uPath + '\\config.json';
+        loadConfig(fs, cFile);
+      })
+
+      $('#getTogglData').submit(handleGetTogglData);
+      $('#saveTogglData').submit(handleSaveTogglData);
+      $('#saveit').submit(handleSaveConfig);
+      $('#fLoadConfig').submit(handleLoadConfig);
+
+      togglAPIKey = $('#togglAPIKey').val();
+      togglTagID = $('#togglTagID').val();
+      togglWorkspaceID = $('#togglWorkspaceID').val();
+      jiraRegex = $('#jiraRegex').val();
+      jiraUrl = $('#jiraUrl').val();
+      jiraUsername = $('#jiraUsername').val();
+      jiraPassword = $('#jiraPassword').val();
+
+      // file system module to perform file operations
+      const fs = require('fs');
+
+
+      function saveConfig(fs, cFile) {
+        //console.log('upath: ' + uPath);
+        //cFile = uPath + '\\config.json';
+        console.log('cfile: ' + cFile);
+
+        togglAPIKey = $('#togglAPIKey').val();
+        togglTagID = $('#togglTagID').val();
+        togglWorkspaceID = $('#togglWorkspaceID').val();
+        jiraRegex = $('#jiraRegex').val();
+        jiraUrl = $('#jiraUrl').val();
+        jiraUsername = $('#jiraUsername').val();
+        jiraPassword = $('#jiraPassword').val();
+        var jsonData = '{"config":{"togglAPIKey":"'+togglAPIKey+'","togglTagID":"'+togglTagID+'","togglWorkspaceID":"'+togglWorkspaceID+'","jiraRegex":"'+jiraRegex+'","jiraUrl":"'+jiraUrl+'","jiraUsername":"'+jiraUsername+'","jiraPassword":"'+jiraPassword+'"}}';
+        
+        jsonData = jsonData.replace("\\","\\\\");
+
+        // parse json
+        var jsonObj = JSON.parse(jsonData);
+        
+        // stringify JSON Object
+        var jsonContent = JSON.stringify(jsonObj);
+        
+        fs.writeFile(cFile, jsonContent, 'utf8', function (err) {
+            if (err) {
+                console.log("An error occured while writing JSON Object to File.");
+                return console.log(err);
+            }
+        
+            console.log("JSON file has been saved.");
+        });
+      }
+
+      function loadConfig(fs, cFile) {
+        //console.log('upath: ' + uPath);
+        //cFile = uPath + '\\config.json';
+        //console.log('cfile: ' + cFile);
+        try {
+          if (fs.existsSync(cFile)) {
+            //file exists
+            console.log('file exists!');
+            fs.readFile(cFile,
+              // callback function that is called when reading file is done
+              function(err, data) { 
+                if (err) throw err;
+                // data is a buffer containing file content
+                var jsonObj = JSON.parse(data.toString('utf8'));
+                $('#jiraRegex').val(jsonObj.config.jiraRegex);
+                $('#jiraUrl').val(jsonObj.config.jiraUrl);
+                $('#jiraUsername').val(jsonObj.config.jiraUsername);
+                $('#jiraPassword').val(jsonObj.config.jiraPassword);  
+                $('#togglWorkspaceID').val(jsonObj.config.togglWorkspaceID);
+                $('#togglAPIKey').val(jsonObj.config.togglAPIKey);
+                $('#togglTagID').val(jsonObj.config.togglTagID);
+
+            });
+
+          }
+        } catch(err) {
+          console.error(err);
+        }
+      }
+
+      function handleSaveConfig(event) {
+        event.preventDefault();
+        saveConfig(fs, cFile);
+      }
+
+      function handleLoadConfig(event) {
+        event.preventDefault();
+        loadConfig(fs, cFile);
+      }
+
+      function handleSaveTogglData(event) {
+        event.preventDefault();
+        saveTogglData();
+      }
+
+      function handleGetTogglData(event) {
+        event.preventDefault();
+        getTogglData();
+      }
+
+
+      function saveTogglData() {
+        togglIDs = $('input:checkbox:checked');
+
+        togglAPIKey = $('#togglAPIKey').val();
+        togglTagID = $('#togglTagID').val();
+        togglWorkspaceID = $('#togglWorkspaceID').val();
+        jiraRegex = $('#jiraRegex').val();
+        jiraUrl = $('#jiraUrl').val();
+        jiraUsername = $('#jiraUsername').val();
+        jiraPassword = $('#jiraPassword').val();
+
+        // process checked toggls
+        try {
+            processCheckedToggls(togglIDs, jiraRegex, togglTagID, togglAPIKey, jiraUrl, jiraUsername, jiraPassword);
+
+        } catch (e) {
+            alert('Error processing toggl data: ' + e.message);
+        }
+
+        saveConfig(fs, uPath);
+      }
+
+      function processCheckedToggls(togglIDs, jiraRegex, togglTagID, togglAPIKey, jiraUrl, jiraUsername, jiraPassword) {
+        // loop through all checked toggles, anything higher than lastSavedTogglID gets saved
+        togglIDList = [];
+        jiraResp = [];
+
+        togglIDs.each(function() {
+            currentTogglID = this.id;
+            currentToggl = this.getAttribute('data-jiraticket');
+            console.log('checking: ' + currentToggl);
+
+            rg = new RegExp(jiraRegex);
+            testForJira = currentToggl.match(rg);
+
+            if (testForJira) {
+                console.log('getting posted to JIRA')
+
+                togglIDList.push(currentTogglID);
+                jiraResp.push(postTimeToJIRA(this, testForJira[0], jiraUrl, jiraUsername, jiraPassword));
+            } else {
+                console.log('skip post to JIRA')
+            }        
+        });
+        
+        // update toggl entry with tag to mark it as posted
+        Promise.all(jiraResp).then((allJiraResp)=>{
+            tagThisToggl(togglAPIKey, togglIDList.join(','));
+        });        
+      }
+
+      function postTimeToJIRA(togglEntryToPost, jiraNum, jiraUrl, jiraUsername, jiraPassword) {
+        return new Promise(function (resolve, reject) {
+          console.log('Posting to JIRA!');
+          console.log('Entry to post: ' + togglEntryToPost.getAttribute('data-jiraticket'));
+
+          timeSpent = togglEntryToPost.value/1000;
+          if (timeSpent < 60) {
+              timeSpent = 60;
+          }
+
+          tdate = togglEntryToPost.getAttribute('data-posttime');
+
+          d = new Date(tdate);
+          tdate = moment(d).format("YYYY-MM-DDTHH:mm:ss.SSSZZ");
+
+          url = jiraUrl + '/rest/api/2/issue/' + jiraNum + '/worklog';
+          var data = JSON.stringify({"comment":"TogglJIRA Autopost","timeSpentSeconds":timeSpent,"started":tdate});
+          
+          var xhr = new XMLHttpRequest();
+          xhr.open("POST", url);
+          xhr.onload = function () {
+            if (this.status >= 200 && this.status < 300) {
+                console.log('jira post success');
+                resolve(xhr.response);
+            } else {
+                console.log('jira post fail');
+                reject({
+                status: this.status,
+                statusText: xhr.statusText
+              });
+            }
+          };
+          xhr.onerror = function () {
+            console.log('jira post fail');
+            reject({
+                status: this.status,
+              statusText: xhr.statusText
+            });
+          };
+          xhr.setRequestHeader("Content-Type", "application/json");
+          auth = jiraUsername + ':' + jiraPassword;
+          auth = window.btoa(auth);
+          auth = 'Basic ' + auth;
+          xhr.setRequestHeader("Authorization", auth);
+          xhr.send(data);
+        })
+      }
+
+      function tagThisToggl(togglAPIKey, currentTogglIDs) {
+
+        var data = JSON.stringify({"time_entry":{"tags":["TogglJIRA"], "tag_action": "add"}});
+
+        var xhr = new XMLHttpRequest();
+        xhr.addEventListener("readystatechange", function() {
+          if(this.readyState === 4) {
+              getTogglData();
+          }
+        });
+
+        url = "https://www.toggl.com/api/v8/time_entries/" + currentTogglIDs;
+
+        xhr.open("PUT", url);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        auth = togglAPIKey + ":api_token";
+        auth = window.btoa(auth);
+        xhr.setRequestHeader("Authorization", "Basic " + auth);
+        xhr.send(data);            
+      }
+
+
+      Number.prototype.toTime = function() {
+        var ms =this,
+            fmt = new Date(ms).toISOString().slice(11, -5);    
+        if (ms >= 8.64e7) {  /* >= 24 hours */
+            var parts = fmt.split(/:(?=\d{2}:)/);
+            parts[0] -= -24 * (ms / 8.64e7 | 0);
+            return parts.join(':');
+        }
+        return fmt;
+      };
+
+
+      function loadTogglData(data) {
+        uData = data.data;
+        $('#userTogglData').empty();
+
+        $.each(uData, function( idx, val) {
+            tags = val.tags;
+            if (tags.includes("TogglJIRA")) {
+                return true;
+            }
+
+            $('#userTogglData').append($(
+                `<div class="form-check"><input type="checkbox" class="form-check-input" name=togglIDs[] id="${val.id}" value=${val.dur} data-jiraticket=${val.description} data-posttime=${val.end}><label class="form-check-label">&nbsp;${val.description}</label>&nbsp;${new Date(val.end).toLocaleDateString()} &nbsp;${val.dur.toTime()}&nbsp;${val.id}</div>`));
+        });
+      }
+
+      function getTogglData() {
+        console.log('Getting toggl data');
+        togglAPIKey = $('#togglAPIKey').val();
+        togglTagID = $('#togglTagID').val();
+        togglWorkspaceID = $('#togglWorkspaceID').val();
+        jiraRegex = $('#jiraRegex').val();
+        jiraUrl = $('#jiraUrl').val();
+        jiraUsername = $('#jiraUsername').val();
+        dateSince = $('#dateSince').val();
+        togglPage = $('#togglPage').val();
+
+        togglUrl = 'https://toggl.com/reports/api/v2/details?workspace_id=' + togglWorkspaceID + '&user_agent=dave@thehorns.us&tag_ids=&page=' + togglPage;
+
+        if (dateSince) {
+          togglUrl = togglUrl + '&since=' + dateSince;
+        }
+
+        auth = togglAPIKey + ":api_token";
+        auth = window.btoa(auth);
+
+        var settings = {
+          "url": togglUrl,
+          "method": "GET",
+          "timeout": 0,
+          "headers": {
+            "Authorization": "Basic " + auth
+          },
+        };
+
+        $.ajax(settings).done(function (response) {
+          loadTogglData(response);
+        });
+      }
+    </script>
+
+  </body>
+
+
+
+
+</html>
