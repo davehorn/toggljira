@@ -14,9 +14,6 @@
     <link rel="stylesheet" href="https://js.arcgis.com/4.3/esri/css/main.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 
-    <!-- 
-      <script type="text/javascript" src="./contents/jquery/jquery-3.5.1.min.js"></script>
-    -->
     <script type="text/javascript" src="jquery/jquery-3.5.1.min.js" onload="window.$ = window.jQuery = module.exports;" ></script>
     <script type="text/javascript" src="moment.min.js"></script>
 
@@ -69,7 +66,7 @@
 
       ipcRenderer.on('uPath', (event, data) => {
         uPath = data;
-        cFile = uPath + '\\config.json';
+        cFile = uPath + '/config.json';
         loadConfig(fs, cFile);
       })
 
@@ -89,7 +86,6 @@
       // file system module to perform file operations
       const fs = require('fs');
 
-
       function saveConfig(fs, cFile) {
         //console.log('upath: ' + uPath);
         //cFile = uPath + '\\config.json';
@@ -101,8 +97,9 @@
         jiraRegex = $('#jiraRegex').val();
         jiraUrl = $('#jiraUrl').val();
         jiraUsername = $('#jiraUsername').val();
-        jiraPassword = $('#jiraPassword').val();
-        var jsonData = '{"config":{"togglAPIKey":"'+togglAPIKey+'","togglTagID":"'+togglTagID+'","togglWorkspaceID":"'+togglWorkspaceID+'","jiraRegex":"'+jiraRegex+'","jiraUrl":"'+jiraUrl+'","jiraUsername":"'+jiraUsername+'","jiraPassword":"'+jiraPassword+'"}}';
+        //jiraPassword = $('#jiraPassword').val();
+        //var jsonData = '{"config":{"togglAPIKey":"'+togglAPIKey+'","togglTagID":"'+togglTagID+'","togglWorkspaceID":"'+togglWorkspaceID+'","jiraRegex":"'+jiraRegex+'","jiraUrl":"'+jiraUrl+'","jiraUsername":"'+jiraUsername+'","jiraPassword":"'+jiraPassword+'"}}';
+        var jsonData = '{"config":{"togglAPIKey":"'+togglAPIKey+'","togglTagID":"'+togglTagID+'","togglWorkspaceID":"'+togglWorkspaceID+'","jiraRegex":"'+jiraRegex+'","jiraUrl":"'+jiraUrl+'","jiraUsername":"'+jiraUsername+'"}}';
         
         jsonData = jsonData.replace("\\","\\\\");
 
@@ -139,7 +136,7 @@
                 $('#jiraRegex').val(jsonObj.config.jiraRegex);
                 $('#jiraUrl').val(jsonObj.config.jiraUrl);
                 $('#jiraUsername').val(jsonObj.config.jiraUsername);
-                $('#jiraPassword').val(jsonObj.config.jiraPassword);  
+                //$('#jiraPassword').val(jsonObj.config.jiraPassword);  
                 $('#togglWorkspaceID').val(jsonObj.config.togglWorkspaceID);
                 $('#togglAPIKey').val(jsonObj.config.togglAPIKey);
                 $('#togglTagID').val(jsonObj.config.togglTagID);
@@ -192,7 +189,7 @@
             alert('Error processing toggl data: ' + e.message);
         }
 
-        saveConfig(fs, uPath);
+        saveConfig(fs, cFile);
       }
 
       function processCheckedToggls(togglIDs, jiraRegex, togglTagID, togglAPIKey, jiraUrl, jiraUsername, jiraPassword) {
